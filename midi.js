@@ -1,76 +1,160 @@
-// A "Node List" of elements with the "key" class
-var nodeList = document.querySelectorAll('.key');
+// execution lifecycle:
+// const keyBindings = createKeyBindings();
+//   for each keyElement, newKeyBinding()
+//     for each keyBinding, newOscillator()
+//
+// Then, assign event handlers for mouse and keys which
+// only interact with the keyBindings' play() and stop() functions
+//
+// A keyBinding becomes an audio controller for its oscillator.
+// The event handler will call keyBinding.play(),
+// and keyBinding.play invokes its own oscillator's start() function
 
-// Now it is an array, and we can use methods such as 'map', 'filter', and 'reduce'
-var keys = [].slice.call(nodeList);
 
-var keyBindings = [];
+// helper function for selecting all of the key elements
+function selectElements(selector) {
+  return [].slice.call(document.querySelectorAll(selector));
+}
 
-function playSound(hertz) {
-  // Initialize the sound engine
-  var audioCtx = new AudioContext();
-  var oscillator = audioCtx.createOscillator();
-  oscillator.frequency.value = hertz;
+// initializes the ability to play a sound using javascript's
+// built in synthesis library
+// it returns an object (dictionary) that has two properties:
+// - start(): begins playing a sound
+// - stop(): stops playing a sound
+function newOscillator(hertz) {
+  const audioCtx = new AudioContext();
+
+  const attack = 1;
+  const release = 1;
+
+  // initialize pitch
+  const oscillator = audioCtx.createOscillator();
+  oscillator.frequency.value = Number(hertz, 10);
   oscillator.start();
-  var g = audioCtx.createGain();
-  oscillator.connect(g);
-  g.connect(audioCtx.destination);
-  //g.gain.exponentialRampToValueAtTime(1, audioCtx.currentTime + 1);
 
-  // stopping the sound requires that we have access to this variable
-  return  [g, audioCtx];
+  // initialize volume
+  const oscillatorVolume = audioCtx.createGain();
+  oscillatorVolume.gain.linearRampToValueAtTime(0, 0);
+
+  // Wire it all together
+  // oscillator -> gain -> guitar amp (audioCtx)
+  oscillator.connect(oscillatorVolume);
+  oscillatorVolume.connect(audioCtx.destination);
+
+  return {
+    start: function() {
+      // first, in case we're overlapping with a release, cancel the release ramp
+      oscillatorVolume.gain.cancelScheduledValues(audioCtx.currentTime);
+
+      // now, make sure to set a "scheduling checkpoint" of the current value
+      oscillatorVolume.gain.setValueAtTime(
+        oscillatorVolume.gain.value,
+        audioCtx.currentTime
+      );
+
+      // NOW, set the ramp
+      oscillatorVolume.gain.linearRampToValueAtTime(1, audioCtx.currentTime + attack);
+    },
+    stop: function() {
+      // first, in case we're overlapping with an attack, cancel the attack ramp
+      oscillatorVolume.gain.cancelScheduledValues(audioCtx.currentTime);
+
+      // now, make sure to set a "scheduling checkpoint" of the current value
+      oscillatorVolume.gain.setValueAtTime(
+        oscillatorVolume.gain.value,
+        audioCtx.currentTime
+      );
+
+      // NOW, set the ramp
+      oscillatorVolume.gain.linearRampToValueAtTime(0, audioCtx.currentTime + release);
+    }
+  }
 }
 
-function stopSound(drivers) {
-  //soundEngine.stop();
-  drivers[0].gain.exponentialRampToValueAtTime(0.00001, drivers[1].currentTime + 1);
-  return null;
+// this returns an object that we'll use to match with the event key or mouse click
+// returns an object with these properties:
+// - element: used to later initialize mouse events
+// - trigger: used to later initialize keydown and keyup events
+// - play: used for both key and mouse events
+// - stop: used for both key and mouse events
+function newKeyBinding(keyElement) {
+  let isPressed = false;
+  const oscillator = newOscillator(keyElement.dataset.hertz);
+
+  return {
+    element: keyElement,
+    trigger: keyElement.dataset.trigger,
+    play: function() {
+      if (isPressed) {
+        return;
+      }
+
+      isPressed = true;
+      oscillator.start();
+      keyElement.classList.add('pressed');
+    },
+    stop: function() {
+      isPressed = false;
+      oscillator.stop();
+      keyElement.classList.remove('pressed');
+    }
+  };
 }
 
+// loops through all of our key elements and
+// creates a key binding for each one
+function createKeyBindings() {
+    const keyElements = selectElements('.key');
+    const bindings = [];
 
-document.addEventListener('keydown', function(e) {
-  var keyPressed = e.key;
+    keyElements.forEach(key => {
+      bindings.push(newKeyBinding(key));
+    });
 
-  var bindMatch = keyBindings.filter(function(binding) {
-    return binding.key === keyPressed;
+    return bindings;
+}
+
+// play sound on mouse click & stop sound on mouse release
+function createClickEventListeners(keyBindings) {
+  keyBindings.forEach(({element, play, stop}) => {
+    element.addEventListener('mousedown', play);
+    element.addEventListener('mouseup', stop);
   });
+}
 
-  // exit out of function if you did not press a key
-  // that is associated with the keyboard
-  if (!bindMatch[0]) {
+// play sound on key down
+document.addEventListener('keydown', e => {
+  const keyPressed = e.key;
+
+  const keyMatch = keyBindings
+    // looks for a match
+    .filter(({trigger}) => trigger === keyPressed)
+    // returns single element instead of array
+    .reduce((prev, cur) => cur, false);
+
+  if (!keyMatch) {
     return;
   }
 
-  soundEngine = playSound(bindMatch[0].hertz);
-
-  var key = document.querySelector('.key[data-hertz="'+bindMatch[0].hertz+'"]');
-  key.classList.add("pressed");
-
-  document.addEventListener('keyup', function(e) {
-    if (e.key === keyPressed) {
-      key.classList.remove("pressed");
-      stopSound(soundEngine);
-    }
-  });
+  keyMatch.play();
 });
 
-keys.forEach(function(key, i) {
-  var soundEngine = null;
+// stop sound on key down
+document.addEventListener('keyup', e => {
+  const keyPressed = e.key;
 
-  keyBindings.push({
-    key: key.dataset.trigger,
-    hertz: key.dataset.hertz
-  });
+  const keyMatch = keyBindings
+    // looks for a match
+    .filter(({trigger}) => trigger === keyPressed)
+    // returns single element instead of array
+    .reduce((prev, cur) => cur, false);
 
-  key.addEventListener('mousedown', function() {
-    key.classList.add("pressed");
-    soundEngine = playSound(key.dataset.hertz);
-  });
+  if (!keyMatch) {
+    return;
+  }
 
-  key.addEventListener('mouseup', function() {
-    setTimeout(function() {
-      stopSound(soundEngine);
-    }, 200);
-    key.classList.remove("pressed");
-  });
+  keyMatch.stop();
 });
+
+const keyBindings = createKeyBindings();
+createClickEventListeners(keyBindings);
