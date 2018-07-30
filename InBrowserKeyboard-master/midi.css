@@ -1,0 +1,60 @@
+html,
+body {
+  background: turquoise;
+}
+.stage{
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.keyboard {
+    display: flex;
+    justify-content: center;
+}
+
+.key {
+  height: 500px;
+  border: 1px solid black;
+  display: relative;
+  position: relative;
+  border-radius: 0 0 4px 4px;
+  transition: 50ms all;
+}
+
+.key.white {
+  width: 100px;
+  background: white;
+  margin-right: 5px;
+  z-index: 1;
+  background: #fff;
+  box-shadow: inset -5px -15px 5px #999, 0 13px 13px #222;
+}
+
+.key.pressed {
+  top: 5px;
+}
+
+.key.white.pressed {
+  background: #ccc;
+  box-shadow: inset -5px -15px 5px #999, 0 5px 5px #222;
+}
+
+.key.black {
+  background: black;
+  height: 400px;
+  width: 50px;
+  margin-left: -25px;
+  margin-right: -25px;
+  z-index: 2;
+  box-shadow: inset -5px -15px 5px #444, 0 13px 13px #222;
+}
+
+.key.black.pressed {
+  box-shadow: inset -5px -15px 5px #444, 0 5px 5px #222;
+}
