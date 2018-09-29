@@ -1,0 +1,61 @@
+body{
+    background: turquoise;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+
+}
+
+.stage{
+  /* position: absolute;
+  top: 175px;
+  left: 300px;
+  right: 300px;
+  bottom: 175px; */
+  background: black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100;
+  width: 500;
+}
+
+.drumkit {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+
+  display: -webkit-box;
+  display: -moz-box;
+  display: -ms-flexbox;
+  display: -webkit-flex;
+  display: flex;
+
+  -webkit-flex-flow: row wrap;
+  justify-content: center;
+  width: 1000px;
+
+}
+
+.pad {
+  background: grey;
+  margin: 5px;
+  padding: 5px;
+  width: 200px;
+  height: 150px;
+  margin-top: 10px;
+
+  line-height: 150px;
+  color: white;
+  font-weight: bold;
+  font-size: 3em;
+  text-align: center;
+  box-shadow: inset -5px -15px 5px #515151;
+}
+
+.pad.pressed {
+  top: 5px;
+  background: #ccc;
+  box-shadow: inset -5px -15px 5px #999, 0 5px 5px #222;
+}
